@@ -1,5 +1,18 @@
 const canvas = document.getElementById("fieldCanvas");
 const ctx = canvas.getContext("2d");
+const FIELD_LINE_COLOR = "rgba(255, 180, 80, 0.72)";
+const FIELD_LINE_GLOW = "rgba(255, 180, 80, 0.18)";
+const EQUIP_LINE_COLOR = "rgba(90, 190, 255, 0.52)";
+const ZERO_LINE_COLOR = "rgba(0, 255, 100, 0.92)";
+let redrawQueued = false;
+function queueDrawScene() {
+  if (redrawQueued) return;
+  redrawQueued = true;
+  requestAnimationFrame(() => {
+    redrawQueued = false;
+    drawScene();
+  });
+}
 function resizeCanvas() {
   canvas.width = window.innerWidth - 200;
   canvas.height = window.innerHeight;
@@ -10,8 +23,8 @@ let charges = [];
 let showField = true;
 let showEquip = true;
 let showPotentialMap = false;
-let equipDensity = 4;
-let fieldDensity = 4;
+let equipDensity = 5;
+let fieldDensity = 5;
 let pixelsPerMeter = 100;
 const defaultChargeMagnitudeC = 1e-6;
 let nextChargeId = 1;
@@ -81,37 +94,73 @@ function drawScene() {
     drawFieldLines();
   }
   for (const c of charges) {
-    ctx.beginPath();
-    ctx.arc(c.x, c.y, 14, 0, Math.PI * 2);
-    ctx.fillStyle = c.q > 0 ? "#ff4444" : "#4488ff";
-    ctx.fill();
-    ctx.closePath();
-    ctx.fillStyle = "white";
-    ctx.font = "bold 16px Arial";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    const chargeText = showChargeValues
-      ? formatChargeValue(c.q * (c.magnitudeC ?? defaultChargeMagnitudeC))
-      : c.label;
-    ctx.fillText(chargeText, c.x, c.y);
+    drawCharge(c);
   }
   for (const p of probes) {
     drawProbe(p);
   }
 }
+function drawCharge(c) {
+  const valueC = getChargeValueC(c);
+  const isPositive = valueC > 0;
+  const baseColor = isPositive ? "#ff4444" : "#4488ff";
+  const glowColor = isPositive ? "rgba(255, 68, 68, 0.35)" : "rgba(68, 136, 255, 0.35)";
+  const strength = Math.max(0.75, Math.min(2.4, Math.sqrt(Math.abs(valueC) / defaultChargeMagnitudeC)));
+  const haloRadius = 18 + strength * 5;
+  const gradient = ctx.createRadialGradient(c.x, c.y, 6, c.x, c.y, haloRadius);
+  gradient.addColorStop(0, glowColor);
+  gradient.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.save();
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(c.x, c.y, haloRadius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowColor = baseColor;
+  ctx.shadowBlur = 10;
+  ctx.beginPath();
+  ctx.arc(c.x, c.y, 14, 0, Math.PI * 2);
+  ctx.fillStyle = baseColor;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = "rgba(255,255,255,0.45)";
+  ctx.stroke();
+  ctx.fillStyle = "white";
+  ctx.font = "bold 16px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  const chargeText = showChargeValues ? formatChargeValue(valueC) : c.label;
+  ctx.fillText(chargeText, c.x, c.y);
+  ctx.restore();
+}
 function formatChargeValue(coulombs) {
   const sign = coulombs >= 0 ? "+" : "−";
   const a = Math.abs(coulombs);
   let val, unit;
-  if (a >= 1)          { val = a;        unit = "C";  }
-  else if (a >= 1e-3)  { val = a / 1e-3; unit = "mC"; }
-  else if (a >= 1e-6)  { val = a / 1e-6; unit = "μC"; }
-  else if (a >= 1e-9)  { val = a / 1e-9; unit = "nC"; }
-  else                 { val = a;        unit = "C";  }
-  const text = val >= 100 ? val.toFixed(0)
-             : val >= 10  ? val.toFixed(1)
-             : val >= 1   ? val.toFixed(2)
-             : val.toPrecision(2);
+  if (a >= 1) {
+    val = a;
+    unit = "C";
+  } else if (a >= 1e-3) {
+    val = a / 1e-3;
+    unit = "mC";
+  } else if (a >= 1e-6) {
+    val = a / 1e-6;
+    unit = "μC";
+  } else if (a >= 1e-9) {
+    val = a / 1e-9;
+    unit = "nC";
+  } else {
+    val = a;
+    unit = "C";
+  }
+  const text =
+    val >= 100
+      ? val.toFixed(0)
+      : val >= 10
+        ? val.toFixed(1)
+        : val >= 1
+          ? val.toFixed(2)
+          : val.toPrecision(2);
   return `${sign}${text} ${unit}`;
 }
 function updateAllControlDisplays() {
@@ -139,26 +188,13 @@ function updateAllControlDisplays() {
 function updateHudCharges() {
   const box = document.getElementById("hudCharges");
   if (!box) return;
-  if (charges.length === 0) {
-    box.innerHTML = "";
-    return;
-  }
-  const rows = charges
-    .slice()
-    .sort((a, b) => a.id - b.id)
-    .map((c) => {
-      const valueC = c.q * (c.magnitudeC ?? defaultChargeMagnitudeC);
-      return `<div class="row">Charge of ${c.label}: ${formatChargeValue(valueC)}</div>`;
-    })
-    .join("");
-  box.innerHTML = rows;
+  box.innerHTML = "";
 }
 function updateSimStats() {
   const stats = document.getElementById("simStats");
   if (!stats) return;
   stats.innerHTML =
-    `Charges: ${charges.length}<br>` +
-    `Probes: ${probes.length}`;
+    `Charges: ${charges.length}<br>` + `Probes: ${probes.length}`;
 }
 const clearBtn = document.getElementById("clearBtn");
 const clearProbesBtn = document.getElementById("clearProbesBtn");
@@ -167,16 +203,13 @@ let clearMode = "charges";
 const clearConfirmWindow = document.getElementById("clearConfirmWindow");
 const confirmClearYes = document.getElementById("confirmClearYes");
 const confirmClearNo = document.getElementById("confirmClearNo");
-const clearConfirmTitle =
-  document.getElementById("clearConfirmTitle");
-const clearConfirmMessage =
-  document.getElementById("clearConfirmMessage");
-const clearProbesConfirmWindow =
-  document.getElementById("clearProbesConfirmWindow");
-const confirmClearProbesYes =
-  document.getElementById("confirmClearProbesYes");
-const confirmClearProbesNo =
-  document.getElementById("confirmClearProbesNo");
+const clearConfirmTitle = document.getElementById("clearConfirmTitle");
+const clearConfirmMessage = document.getElementById("clearConfirmMessage");
+const clearProbesConfirmWindow = document.getElementById(
+  "clearProbesConfirmWindow",
+);
+const confirmClearProbesYes = document.getElementById("confirmClearProbesYes");
+const confirmClearProbesNo = document.getElementById("confirmClearProbesNo");
 if (clearBtn && clearConfirmWindow) {
   clearBtn.addEventListener("click", () => {
     clearMode = "charges";
@@ -257,11 +290,11 @@ function createSetupCode() {
       xRatio: c.x / canvas.width,
       yRatio: c.y / canvas.height,
       q: c.q,
-      magnitudeC: c.magnitudeC ?? defaultChargeMagnitudeC
+      magnitudeC: c.magnitudeC ?? defaultChargeMagnitudeC,
     })),
     probes: probes.map((p) => ({
       xRatio: p.x / canvas.width,
-      yRatio: p.y / canvas.height
+      yRatio: p.y / canvas.height,
     })),
     settings: {
       showField,
@@ -270,8 +303,8 @@ function createSetupCode() {
       showChargeValues,
       pixelsPerMeter,
       fieldDensity,
-      equipDensity
-    }
+      equipDensity,
+    },
   };
   return "EMSIM:" + btoa(JSON.stringify(setup));
 }
@@ -302,7 +335,7 @@ function loadSetupFromCode(code) {
       magnitudeC:
         typeof savedCharge.magnitudeC === "number"
           ? savedCharge.magnitudeC
-          : defaultChargeMagnitudeC
+          : defaultChargeMagnitudeC,
     });
   }
   if (Array.isArray(setup.probes)) {
@@ -312,7 +345,7 @@ function loadSetupFromCode(code) {
         id,
         label: `P${id}`,
         x: savedProbe.xRatio * canvas.width,
-        y: savedProbe.yRatio * canvas.height
+        y: savedProbe.yRatio * canvas.height,
       });
     }
   }
@@ -332,13 +365,13 @@ function loadSetupFromCode(code) {
       setup.settings.fieldDensity >= 1 &&
       setup.settings.fieldDensity <= 10
         ? setup.settings.fieldDensity
-        : 4;
+        : 5;
     equipDensity =
       Number.isInteger(setup.settings.equipDensity) &&
       setup.settings.equipDensity >= 1 &&
       setup.settings.equipDensity <= 10
         ? setup.settings.equipDensity
-        : 4;
+        : 5;
   }
   const display = document.getElementById("currentScenarioDisplay");
   if (display) {
@@ -430,7 +463,6 @@ if (confirmLoadSetupBtn && loadSetupCode && loadSetupWindow) {
   });
 }
 const screenshotBtn = document.getElementById("screenshotBtn");
-const feedbackBtn = document.getElementById("feedbackBtn");
 screenshotBtn.addEventListener("click", () => {
   const hud = document.getElementById("hud");
   if (hud) hud.style.display = "none";
@@ -442,14 +474,6 @@ screenshotBtn.addEventListener("click", () => {
     if (hud) hud.style.display = "block";
   }, 100);
 });
-if (feedbackBtn) {
-  feedbackBtn.addEventListener("click", () => {
-    window.open(
-      "https://forms.gle/UXDnKUY1srj4odmU8",
-      "_blank"
-    );
-  });
-}
 const probeToolBtn = document.getElementById("probeToolBtn");
 const resetDefaultsBtn = document.getElementById("resetDefaultsBtn");
 if (resetDefaultsBtn) {
@@ -459,8 +483,8 @@ if (resetDefaultsBtn) {
     showPotentialMap = false;
     showChargeValues = false;
     pixelsPerMeter = 100;
-    fieldDensity = 4;
-    equipDensity = 4;
+    fieldDensity = 5;
+    equipDensity = 5;
     probeMode = false;
     if (probeToolBtn) {
       probeToolBtn.textContent = "Probe Tool: Off";
@@ -488,7 +512,7 @@ canvas.addEventListener("mousedown", (e) => {
       id: nextProbeId,
       label: `P${nextProbeId}`,
       x,
-      y
+      y,
     });
     nextProbeId++;
     updateSimStats();
@@ -502,6 +526,7 @@ canvas.addEventListener("mousedown", (e) => {
     if (dist < 15) {
       draggingCharge = c;
       isDragging = true;
+      canvas.classList.add("dragging-charge");
       break;
     }
   }
@@ -511,11 +536,12 @@ canvas.addEventListener("mousemove", (e) => {
   const rect = canvas.getBoundingClientRect();
   draggingCharge.x = e.clientX - rect.left;
   draggingCharge.y = e.clientY - rect.top;
-  drawScene();
+  queueDrawScene();
 });
 canvas.addEventListener("mouseup", () => {
   isDragging = false;
   draggingCharge = null;
+  canvas.classList.remove("dragging-charge");
 });
 canvas.addEventListener("dblclick", (e) => {
   if (isDragging) return;
@@ -563,16 +589,17 @@ canvas.addEventListener("contextmenu", (e) => {
   }
 });
 function computeElectricField(x, y) {
-  let Ex = 0, Ey = 0;
+  let Ex = 0,
+    Ey = 0;
   const k = 8.99e9;
   for (const c of charges) {
     const dx_px = x - c.x;
     const dy_px = y - c.y;
     const dx = dx_px / pixelsPerMeter;
     const dy = dy_px / pixelsPerMeter;
-    const r2 = dx*dx + dy*dy;
+    const r2 = dx * dx + dy * dy;
     if (r2 === 0) continue;
-    const r  = Math.sqrt(r2);
+    const r = Math.sqrt(r2);
     const qC = c.q * (c.magnitudeC ?? defaultChargeMagnitudeC);
     const E_mag = (k * qC) / r2;
     Ex += E_mag * (dx / r);
@@ -610,15 +637,26 @@ function drawProbe(p) {
   const V = computePotential(p.x, p.y);
   const { Ex, Ey } = computeElectricField(p.x, p.y);
   const Emag = Math.hypot(Ex, Ey);
-  let angleDeg = Math.atan2(-Ey, Ex) * 180 / Math.PI;
-  if (angleDeg < 0) {
-    angleDeg += 360;
-  }
+  let angleDeg = (Math.atan2(-Ey, Ex) * 180) / Math.PI;
+  if (angleDeg < 0) angleDeg += 360;
+  ctx.save();
+  ctx.strokeStyle = "rgba(0, 255, 153, 0.55)";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
   ctx.beginPath();
-  ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
-  ctx.fillStyle = "#00ff99";
+  ctx.moveTo(p.x - 16, p.y);
+  ctx.lineTo(p.x + 16, p.y);
+  ctx.moveTo(p.x, p.y - 16);
+  ctx.lineTo(p.x, p.y + 16);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, 7, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(0,255,153,0.95)";
+  ctx.shadowColor = "rgba(0,255,153,0.85)";
+  ctx.shadowBlur = 10;
   ctx.fill();
-  ctx.closePath();
+  ctx.shadowBlur = 0;
   ctx.strokeStyle = "#ffffff";
   ctx.lineWidth = 1;
   ctx.stroke();
@@ -628,147 +666,307 @@ function drawProbe(p) {
   ctx.textBaseline = "top";
   const x_m = (p.x / pixelsPerMeter).toFixed(2);
   const y_m = (p.y / pixelsPerMeter).toFixed(2);
-  ctx.fillText(
-    `${p.label}: (${x_m}, ${y_m}) m`,
-    p.x + 10,
-    p.y - 28
-  );
-  ctx.fillText(
-    `V=${formatNumberForProbe(V, "V")}`,
-    p.x + 10,
-    p.y - 14
-  );
-  ctx.fillText(
-    `|E|=${formatNumberForProbe(Emag, "N/C")}, θ=${angleDeg.toFixed(1)}°`,
-    p.x + 10,
-    p.y
-  );
+  ctx.fillText(`${p.label}: (${x_m}, ${y_m}) m`, p.x + 12, p.y - 30);
+  ctx.fillText(`V=${formatNumberForProbe(V, "V")}`, p.x + 12, p.y - 16);
+  ctx.fillText(`|E|=${formatNumberForProbe(Emag, "N/C")}, θ=${angleDeg.toFixed(1)}°`, p.x + 12, p.y - 2);
+  ctx.restore();
 }
-function traceFieldLine(x, y, step = 8, maxSteps = 2000) {
-  const points = [];
+function getChargeValueC(charge) {
+  return charge.q * (charge.magnitudeC ?? defaultChargeMagnitudeC);
+}
+function isInsideCanvas(x, y, margin = 0) {
+  return x >= -margin && y >= -margin && x <= canvas.width + margin && y <= canvas.height + margin;
+}
+function nearestChargeDistance(x, y) {
+  let minDist = Infinity;
+  for (const c of charges) minDist = Math.min(minDist, Math.hypot(x - c.x, y - c.y));
+  return minDist;
+}
+function normalizedFieldDirection(x, y, direction = 1) {
+  const { Ex, Ey } = computeElectricField(x, y);
+  const mag = Math.hypot(Ex, Ey);
+  if (!Number.isFinite(mag) || mag < 1e-9) return null;
+  return { x: (direction * Ex) / mag, y: (direction * Ey) / mag };
+}
+function traceFieldLine(x, y, direction = 1, step = 6, maxSteps = 1600) {
+  const points = [{ x, y }];
   let px = x;
   let py = y;
   for (let i = 0; i < maxSteps; i++) {
-    const { Ex, Ey } = computeElectricField(px, py);
-    const E = Math.sqrt(Ex * Ex + Ey * Ey);
-    if (E < 0.0001) break;
-    const nx = Ex / E;
-    const ny = Ey / E;
-    px += nx * step;
-    py += ny * step;
-    if (px < 0 || py < 0 || px > canvas.width || py > canvas.height) break;
-    points.push({ x: px, y: py });
+    const d1 = normalizedFieldDirection(px, py, direction);
+    if (!d1) break;
+    const midX = px + d1.x * step * 0.5;
+    const midY = py + d1.y * step * 0.5;
+    const d2 = normalizedFieldDirection(midX, midY, direction) || d1;
+    const nx = px + d2.x * step;
+    const ny = py + d2.y * step;
+    if (!isInsideCanvas(nx, ny, 2)) break;
+    points.push({ x: nx, y: ny });
+    px = nx;
+    py = ny;
+    if (nearestChargeDistance(px, py) < 16) break;
   }
   return points;
 }
-function drawFieldLines() {
-  if (charges.length === 0) return;
-  const numSeeds = Math.max(6, Math.round(6 + fieldDensity * 2.5));
-  const lineColor = "rgba(255, 180, 80, 0.7)";
-  for (const c of charges) {
-    for (let i = 0; i < numSeeds; i++) {
-      const angle = (i / numSeeds) * 2 * Math.PI;
-      const startX = c.x + 20 * Math.cos(angle);
-      const startY = c.y + 20 * Math.sin(angle);
-      const forward = traceFieldLine(startX, startY, 8);
-      const backward = traceFieldLine(startX, startY, -8);
-      const linePoints = backward.reverse().concat(forward);
-      ctx.beginPath();
-      if (linePoints.length > 0) ctx.moveTo(linePoints[0].x, linePoints[0].y);
-      for (const p of linePoints) ctx.lineTo(p.x, p.y);
-      ctx.strokeStyle = lineColor;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      drawArrowsAlongLine(linePoints, 100);
+function samplePolylineForSpacing(points, every = 10) {
+  const samples = [];
+  for (let i = 0; i < points.length; i += every) {
+    const p = points[i];
+    if (!_nearAnyCharge(p.x, p.y, 38)) samples.push(p);
+  }
+  return samples;
+}
+
+function polylineTooClose(points, acceptedSamples, minSpacing) {
+  const minSpacing2 = minSpacing * minSpacing;
+  for (const p of samplePolylineForSpacing(points, 9)) {
+    for (const q of acceptedSamples) {
+      const dx = p.x - q.x;
+      const dy = p.y - q.y;
+      if (dx * dx + dy * dy < minSpacing2) return true;
     }
   }
+  return false;
+}
+
+function rememberPolyline(points, acceptedSamples) {
+  acceptedSamples.push(...samplePolylineForSpacing(points, 11));
+}
+
+function drawFieldPolyline(points, acceptedSamples = null, minSpacing = 0) {
+  if (!points || points.length < 8) return false;
+  if (acceptedSamples && minSpacing > 0 && polylineTooClose(points, acceptedSamples, minSpacing)) return false;
+  drawProfessionalFieldLine(points);
+  if (acceptedSamples) rememberPolyline(points, acceptedSamples);
+  return true;
+}
+function edgeFadeFactor(p) {
+  const m = 42;
+  const d = Math.min(p.x, p.y, canvas.width - p.x, canvas.height - p.y);
+  return Math.max(0.15, Math.min(1, d / m));
+}
+function drawSegmentedLine(points, color, baseWidth, alphaScale = 1) {
+  for (let i = 1; i < points.length; i++) {
+    const p0 = points[i - 1];
+    const p1 = points[i];
+    const t = i / Math.max(1, points.length - 1);
+    const fade = Math.min(edgeFadeFactor(p0), edgeFadeFactor(p1));
+    const width = baseWidth * (1.15 - 0.35 * t);
+    ctx.globalAlpha = alphaScale * fade;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.moveTo(p0.x, p0.y);
+    ctx.lineTo(p1.x, p1.y);
+    ctx.strokeStyle = color;
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+function drawProfessionalFieldLine(points) {
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  drawSegmentedLine(points, FIELD_LINE_GLOW, 3.2, 0.9);
+  drawSegmentedLine(points, FIELD_LINE_COLOR, 1.15, 1);
+  ctx.restore();
+  drawArrowsAlongLine(points, 95);
+}
+function traceFullFieldLine(x, y) {
+  const backward = traceFieldLine(x, y, -1);
+  const forward = traceFieldLine(x, y, 1);
+  return backward.reverse().concat(forward.slice(1));
+}
+
+function makeEdgeSeeds(spacing) {
+  const seeds = [];
+  for (let x = spacing / 2; x < canvas.width; x += spacing) {
+    seeds.push({ x, y: 2 }, { x, y: canvas.height - 2 });
+  }
+  for (let y = spacing / 2; y < canvas.height; y += spacing) {
+    seeds.push({ x: 2, y }, { x: canvas.width - 2, y });
+  }
+  return seeds;
+}
+
+function drawFieldLines() {
+  if (charges.length === 0) return;
+  const positiveCharges = charges.filter((c) => getChargeValueC(c) > 0);
+  const negativeCharges = charges.filter((c) => getChargeValueC(c) < 0);
+  const sourceCharges = positiveCharges.length ? positiveCharges : negativeCharges;
+  const traceDirection = positiveCharges.length ? 1 : -1;
+  const baseSeeds = Math.max(8, Math.round(8 + fieldDensity * 2));
+  const maxFieldLines = Math.max(52, Math.round(42 + fieldDensity * 12));
+  const acceptedSamples = [];
+  let drawn = 0;
+  ctx.strokeStyle = "rgba(255, 180, 80, 0.72)";
+  ctx.lineWidth = 1;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  // Primary lines: keep the clean, evenly spaced look by seeding only from true source charges.
+  // This avoids drawing the same physical field line twice from both ends of a dipole.
+  for (const c of sourceCharges) {
+    const weight = Math.max(0.5, Math.abs(getChargeValueC(c)) / defaultChargeMagnitudeC);
+    const seeds = Math.max(10, Math.min(52, Math.round(baseSeeds * Math.sqrt(weight))));
+    for (let i = 0; i < seeds; i++) {
+      const angle = ((i + 0.5) / seeds) * 2 * Math.PI;
+      const sx = c.x + 18 * Math.cos(angle);
+      const sy = c.y + 18 * Math.sin(angle);
+      if (!isInsideCanvas(sx, sy) || _nearAnyCharge(sx, sy, 15)) continue;
+      const pts = traceFieldLine(sx, sy, traceDirection);
+      // For an all-negative configuration, the trace is grown outward from the
+      // negative charge, but field direction arrows should point inward.
+      // Reverse only the display order so the visual line still covers the
+      // screen while arrows point toward the negative charge.
+      if (positiveCharges.length === 0) pts.reverse();
+      if (drawFieldPolyline(pts, acceptedSamples)) drawn++;
+      if (drawn >= maxFieldLines) return;
+    }
+  }
+
+  // Supplemental whole-screen lines: add only lines that are not too close to existing ones.
+  // The spacing is intentionally gentle so the screen fills in without collapsing to only a few lines.
+  const edgeSpacing = Math.max(70, 250 - fieldDensity * 16);
+  const minSpacing = Math.max(18, 38 - fieldDensity * 1.6);
+  for (const seed of makeEdgeSeeds(edgeSpacing)) {
+    if (_nearAnyCharge(seed.x, seed.y, 26)) continue;
+    const pts = traceFullFieldLine(seed.x, seed.y);
+    if (drawFieldPolyline(pts, acceptedSamples, minSpacing)) drawn++;
+    if (drawn >= maxFieldLines) return;
+  }
+}
+function localCurvature(points, i) {
+  if (i < 2 || i > points.length - 3) return 0;
+  const a1 = Math.atan2(points[i].y - points[i - 2].y, points[i].x - points[i - 2].x);
+  const a2 = Math.atan2(points[i + 2].y - points[i].y, points[i + 2].x - points[i].x);
+  let diff = Math.abs(a2 - a1);
+  if (diff > Math.PI) diff = Math.PI * 2 - diff;
+  return diff;
 }
 function drawArrowsAlongLine(points, spacing = 100) {
   if (points.length < 2) return;
-  let distance = 0;
+  let distance = spacing * 0.45;
   for (let i = 1; i < points.length; i++) {
     const dx = points[i].x - points[i - 1].x;
     const dy = points[i].y - points[i - 1].y;
-    const segLength = Math.sqrt(dx * dx + dy * dy);
+    const segLength = Math.hypot(dx, dy);
+    const curvature = localCurvature(points, i);
+    const targetSpacing = Math.max(70, spacing - curvature * 45);
     distance += segLength;
-    if (distance > spacing) {
+    if (distance > targetSpacing) {
       distance = 0;
+      const fade = edgeFadeFactor(points[i]);
       const angle = Math.atan2(dy, dx);
       const size = 6;
+      ctx.save();
+      ctx.globalAlpha = 0.82 * fade;
       ctx.beginPath();
       ctx.moveTo(points[i].x, points[i].y);
       ctx.lineTo(points[i].x - size * Math.cos(angle - Math.PI / 6), points[i].y - size * Math.sin(angle - Math.PI / 6));
       ctx.moveTo(points[i].x, points[i].y);
       ctx.lineTo(points[i].x - size * Math.cos(angle + Math.PI / 6), points[i].y - size * Math.sin(angle + Math.PI / 6));
-      ctx.strokeStyle = "rgba(255,255,255,0.8)";
+      ctx.strokeStyle = "rgba(255,255,255,0.88)";
       ctx.lineWidth = 1;
       ctx.stroke();
+      ctx.restore();
     }
   }
 }
-function traceEquipotential(x, y, step = 10, maxSteps = 1200) {
-  const forward  = _traceIso(x, y, +step, maxSteps);
-  const backward = _traceIso(x, y, -step, maxSteps);
-  return backward.reverse().concat(forward);
-}
-function _traceIso(x, y, step, maxSteps) {
-  const pts = [];
-  let px = x, py = y;
-  for (let i = 0; i < maxSteps; i++) {
-    const { Ex, Ey } = computeElectricField(px, py);
-    const mag = Math.hypot(Ex, Ey);
-    if (mag < 1e-3) break;
-    const nx = -Ey / mag;
-    const ny =  +Ex / mag;
-    px += nx * step;
-    py += ny * step;
-    if (px < 0 || py < 0 || px > canvas.width || py > canvas.height) break;
-    if (_nearAnyCharge(px, py, 18)) break;
-    pts.push({ x: px, y: py });
-  }
-  return pts;
-}
 function _nearAnyCharge(x, y, r = 18) {
-  for (const c of charges) {
-    const dx = x - c.x, dy = y - c.y;
-    if (dx*dx + dy*dy < r*r) return true;
+  return charges.some((c) => Math.hypot(x - c.x, y - c.y) < r);
+}
+function contourLevels() {
+  const samples = [];
+  const step = Math.max(12, Math.round(Math.min(canvas.width, canvas.height) / 70));
+  for (let y = step / 2; y < canvas.height; y += step) {
+    for (let x = step / 2; x < canvas.width; x += step) {
+      if (_nearAnyCharge(x, y, 24)) continue;
+      const v = computePotential(x, y);
+      if (Number.isFinite(v) && Math.abs(v) > 1e-6) samples.push(Math.abs(v));
+    }
   }
-  return false;
+  if (!samples.length) return [];
+  samples.sort((a, b) => a - b);
+  const lo = samples[Math.floor(samples.length * 0.08)];
+  const hi = samples[Math.floor(samples.length * 0.92)];
+  if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi <= 0) return [];
+  const count = Math.max(4, Math.min(12, equipDensity + 3));
+  const minLog = Math.log10(Math.max(lo, hi / 1e4));
+  const maxLog = Math.log10(hi);
+  const positive = Array.from({ length: count }, (_, i) => 10 ** (minLog + ((maxLog - minLog) * i) / Math.max(1, count - 1)));
+  const hasPos = charges.some((c) => getChargeValueC(c) > 0);
+  const hasNeg = charges.some((c) => getChargeValueC(c) < 0);
+  return [
+    ...(hasNeg ? positive.map((v) => -v).reverse() : []),
+    ...(hasPos ? positive : []),
+  ];
+}
+function interpolateContourPoint(x1, y1, v1, x2, y2, v2, level) {
+  const denom = v2 - v1;
+  const t = Math.abs(denom) < 1e-12 ? 0.5 : (level - v1) / denom;
+  return { x: x1 + t * (x2 - x1), y: y1 + t * (y2 - y1) };
+}
+function drawContourSegment(p1, p2) {
+  if (!p1 || !p2) return;
+  if (_nearAnyCharge(p1.x, p1.y, 17) || _nearAnyCharge(p2.x, p2.y, 17)) return;
+  const fade = Math.min(edgeFadeFactor(p1), edgeFadeFactor(p2));
+  ctx.save();
+  ctx.globalAlpha = 0.22 * fade;
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(p1.x, p1.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.stroke();
+  ctx.globalAlpha = fade;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(p1.x, p1.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.stroke();
+  ctx.restore();
 }
 function drawEquipotentials() {
   if (charges.length === 0) return;
-  const angularSkip   = Math.max(1, Math.round(11 - equipDensity));
-  const seedsPerCharge = 24;
-  const startRadius    = 40;
-  const color          = "rgba(90, 190, 255, 0.45)";
-  const lineW          = 0.9;
-  ctx.strokeStyle = color;
-  ctx.lineWidth   = lineW;
-  let drawnCount = 0, maxCurves = 120;
-  for (const c of charges) {
-    for (let i = 0; i < seedsPerCharge; i++) {
-      if (i % angularSkip !== 0) continue;
-      const ang = (i / seedsPerCharge) * 2 * Math.PI;
-      const sx = c.x + startRadius * Math.cos(ang);
-      const sy = c.y + startRadius * Math.sin(ang);
-      if (_nearAnyCharge(sx, sy, 20)) continue;
-      const step = equipDensity <= 3 ? 12 : equipDensity <= 6 ? 10 : 8;
-      const maxSteps = 1400;
-      const pts = traceEquipotential(sx, sy, step, maxSteps);
-      if (pts.length < 6) continue;
-      ctx.beginPath();
-      ctx.moveTo(pts[0].x, pts[0].y);
-      for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k].x, pts[k].y);
-      ctx.stroke();
-      drawnCount++;
-      if (drawnCount >= maxCurves) return;
+  const step = equipDensity >= 8 ? 7 : equipDensity >= 5 ? 9 : 12;
+  const cols = Math.ceil(canvas.width / step) + 1;
+  const rows = Math.ceil(canvas.height / step) + 1;
+  const values = Array.from({ length: rows }, (_, j) =>
+    Array.from({ length: cols }, (_, i) => computePotential(i * step, j * step)),
+  );
+  ctx.strokeStyle = EQUIP_LINE_COLOR;
+  ctx.lineWidth = 1;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  for (const level of contourLevels()) {
+    ctx.strokeStyle = EQUIP_LINE_COLOR;
+    ctx.lineWidth = 1;
+    for (let j = 0; j < rows - 1; j++) {
+      for (let i = 0; i < cols - 1; i++) {
+        const x = i * step;
+        const y = j * step;
+        const v0 = values[j][i];
+        const v1 = values[j][i + 1];
+        const v2 = values[j + 1][i + 1];
+        const v3 = values[j + 1][i];
+        const edgePoints = [];
+        if ((v0 < level) !== (v1 < level)) edgePoints.push(interpolateContourPoint(x, y, v0, x + step, y, v1, level));
+        if ((v1 < level) !== (v2 < level)) edgePoints.push(interpolateContourPoint(x + step, y, v1, x + step, y + step, v2, level));
+        if ((v2 < level) !== (v3 < level)) edgePoints.push(interpolateContourPoint(x + step, y + step, v2, x, y + step, v3, level));
+        if ((v3 < level) !== (v0 < level)) edgePoints.push(interpolateContourPoint(x, y + step, v3, x, y, v0, level));
+        if (edgePoints.length === 2) {
+          drawContourSegment(edgePoints[0], edgePoints[1]);
+        } else if (edgePoints.length === 4) {
+          drawContourSegment(edgePoints[0], edgePoints[1]);
+          drawContourSegment(edgePoints[2], edgePoints[3]);
+        }
+      }
     }
   }
 }
 function drawPotentialMap() {
   const k = 8.99e9;
   const step = 6;
-  const maxV = Math.max(1e3, 5e5 * charges.length / pixelsPerMeter);
+  const maxV = Math.max(1e3, (5e5 * charges.length) / pixelsPerMeter);
   const alpha = 0.4;
   for (let y = 0; y < canvas.height; y += step) {
     for (let x = 0; x < canvas.width; x += step) {
@@ -786,43 +984,47 @@ function drawPotentialMap() {
       ctx.fillRect(x, y, step, step);
     }
   }
-ctx.strokeStyle = "rgba(0, 255, 100)";
-ctx.lineWidth = 1.8;
-for (let y = 0; y < canvas.height - step; y += step) {
-  for (let x = 0; x < canvas.width - step; x += step) {
-    const V00 = computePotential(x, y);
-    const V10 = computePotential(x + step, y);
-    const V01 = computePotential(x, y + step);
-    const V11 = computePotential(x + step, y + step);
-    const allPos = V00 > 0 && V10 > 0 && V01 > 0 && V11 > 0;
-    const allNeg = V00 < 0 && V10 < 0 && V01 < 0 && V11 < 0;
-    if (allPos || allNeg) continue;
-    ctx.beginPath();
-    if ((V00 > 0) !== (V10 > 0)) {
-      const t = Math.abs(V00) / (Math.abs(V00) + Math.abs(V10));
-      ctx.moveTo(x + t * step, y);
+  ctx.save();
+  ctx.strokeStyle = ZERO_LINE_COLOR;
+  ctx.shadowColor = ZERO_LINE_COLOR;
+  ctx.shadowBlur = 8;
+  ctx.lineWidth = 2;
+  for (let y = 0; y < canvas.height - step; y += step) {
+    for (let x = 0; x < canvas.width - step; x += step) {
+      const V00 = computePotential(x, y);
+      const V10 = computePotential(x + step, y);
+      const V01 = computePotential(x, y + step);
+      const V11 = computePotential(x + step, y + step);
+      const allPos = V00 > 0 && V10 > 0 && V01 > 0 && V11 > 0;
+      const allNeg = V00 < 0 && V10 < 0 && V01 < 0 && V11 < 0;
+      if (allPos || allNeg) continue;
+      ctx.beginPath();
+      if (V00 > 0 !== V10 > 0) {
+        const t = Math.abs(V00) / (Math.abs(V00) + Math.abs(V10));
+        ctx.moveTo(x + t * step, y);
+      }
+      if (V10 > 0 !== V11 > 0) {
+        const t = Math.abs(V10) / (Math.abs(V10) + Math.abs(V11));
+        ctx.lineTo(x + step, y + t * step);
+      }
+      if (V11 > 0 !== V01 > 0) {
+        const t = Math.abs(V11) / (Math.abs(V11) + Math.abs(V01));
+        ctx.lineTo(x + (1 - t) * step, y + step);
+      }
+      if (V01 > 0 !== V00 > 0) {
+        const t = Math.abs(V01) / (Math.abs(V01) + Math.abs(V00));
+        ctx.lineTo(x, y + (1 - t) * step);
+      }
+      ctx.stroke();
     }
-    if ((V10 > 0) !== (V11 > 0)) {
-      const t = Math.abs(V10) / (Math.abs(V10) + Math.abs(V11));
-      ctx.lineTo(x + step, y + t * step);
-    }
-    if ((V11 > 0) !== (V01 > 0)) {
-      const t = Math.abs(V11) / (Math.abs(V11) + Math.abs(V01));
-      ctx.lineTo(x + (1 - t) * step, y + step);
-    }
-    if ((V01 > 0) !== (V00 > 0)) {
-      const t = Math.abs(V01) / (Math.abs(V01) + Math.abs(V00));
-      ctx.lineTo(x, y + (1 - t) * step);
-    }
-    ctx.stroke();
   }
-}
+  ctx.restore();
 }
 function voltageToColor(V, maxV, alpha = 0.4) {
   const clamp = Math.max(-maxV, Math.min(maxV, V));
   const norm = clamp / maxV;
-  const red   = norm > 0 ? 255 * norm : 0;
-  const blue  = norm < 0 ? 255 * -norm : 0;
+  const red = norm > 0 ? 255 * norm : 0;
+  const blue = norm < 0 ? 255 * -norm : 0;
   const green = 60;
   return `rgba(${red.toFixed(0)},${green.toFixed(0)},${blue.toFixed(0)},${alpha})`;
 }
@@ -856,8 +1058,8 @@ if (toggleChargeValuesEl) {
     drawScene();
   });
 }
-const pxInput    = document.getElementById("pxPerMeterInput");
-const scaleInfo  = document.getElementById("scaleInfo");
+const pxInput = document.getElementById("pxPerMeterInput");
+const scaleInfo = document.getElementById("scaleInfo");
 const scaleError = document.getElementById("scaleError");
 function applyScaleValue(val) {
   pixelsPerMeter = val;
@@ -869,9 +1071,7 @@ function validateAndApplyScale() {
   const raw = pxInput.value.trim();
   const val = Number(raw);
   const valid =
-    Number.isFinite(val) &&
-    Number.isInteger(val) &&
-    val >= 1 && val <= 500;
+    Number.isFinite(val) && Number.isInteger(val) && val >= 1 && val <= 500;
   if (valid) {
     pxInput.classList.remove("invalid");
     if (scaleError) scaleError.style.display = "none";
@@ -889,7 +1089,7 @@ if (pxInput) {
   pxInput.addEventListener("blur", validateAndApplyScale);
 }
 const fieldSlider = document.getElementById("fieldDensity");
-const fieldValue  = document.getElementById("fieldDensityVal");
+const fieldValue = document.getElementById("fieldDensityVal");
 if (fieldSlider && fieldValue) {
   fieldValue.textContent = String(fieldDensity);
   fieldSlider.value = String(fieldDensity);
@@ -900,7 +1100,7 @@ if (fieldSlider && fieldValue) {
   });
 }
 const densSlider = document.getElementById("equipDensity");
-const densValue  = document.getElementById("equipDensityVal");
+const densValue = document.getElementById("equipDensityVal");
 if (densSlider && densValue) {
   densValue.textContent = String(equipDensity);
   densSlider.value = String(equipDensity);
@@ -924,11 +1124,15 @@ function openChargeModal(charge) {
   editingCharge = charge;
   const mag = charge.magnitudeC ?? defaultChargeMagnitudeC;
   const absMag = Math.abs(mag);
-  let exponent = 0, mantissa = absMag;
+  let exponent = 0,
+    mantissa = absMag;
   if (absMag > 0) {
     exponent = Math.floor(Math.log10(absMag));
     mantissa = absMag / Math.pow(10, exponent);
-    if (mantissa >= 10) { mantissa /= 10; exponent += 1; }
+    if (mantissa >= 10) {
+      mantissa /= 10;
+      exponent += 1;
+    }
   }
   titleEl.textContent = `Edit charge (${charge.label})`;
   mantissaEl.value = mantissa.toString();
@@ -954,9 +1158,10 @@ if (chargeModal) {
 function saveChargeFromModal() {
   if (!editingCharge) return;
   const mant = Number(mantissaEl.value);
-  const exp  = Number(exponentEl.value);
+  const exp = Number(exponentEl.value);
   const validMant = Number.isFinite(mant) && mant > 0;
-  const validExp  = Number.isFinite(exp) && Number.isInteger(exp) && exp >= -12 && exp <= 12;
+  const validExp =
+    Number.isFinite(exp) && Number.isInteger(exp) && exp >= -12 && exp <= 12;
   if (!validMant || !validExp) {
     chargeErrEl.style.display = "block";
     return;
@@ -987,7 +1192,7 @@ const scenarioNames = {
   quadrupole: "Quadrupole",
   triangle: "Charge Triangle",
   fourPositiveSquare: "Four Positive Charges",
-  parallelPlates: "Parallel Plates"
+  parallelPlates: "Parallel Plates",
 };
 function loadScenario(name) {
   charges = [];
@@ -1077,16 +1282,26 @@ document.querySelectorAll(".scenarioBtn").forEach((btn) => {
   });
 });
 const scenarioDescriptions = {
-  singlePositive: "A single positive charge. Field lines point outward, and equipotential lines form circles around the charge.",
-  singleNegative: "A single negative charge. Field lines point inward toward the charge, and equipotential lines form circles around it.",
-  dipole: "A positive and negative charge of equal magnitude. Field lines travel from the positive charge to the negative charge.",
-  unequalDipole: "A positive and negative charge with different magnitudes. The field pattern becomes asymmetric.",
-  twoPositive: "Two equal positive charges. Field lines repel away from both charges, with a low-field region between them.",
-  threeLine: "Three charges arranged in a line. This setup demonstrates superposition and field cancellation.",
-  quadrupole: "Four alternating charges in a square-like pattern. This creates a more complex multipole field.",
-  triangle: "Three charges arranged in a triangle. This shows how geometry affects electric field and potential patterns.",
-  fourPositiveSquare: "Four positive charges at the corners of a square. The center has strong symmetry and field cancellation.",
-  parallelPlates: "Two rows of opposite charges approximating parallel plates. The field between them is nearly uniform."
+  singlePositive:
+    "A single positive charge. Field lines point outward, and equipotential lines form circles around the charge.",
+  singleNegative:
+    "A single negative charge. Field lines point inward toward the charge, and equipotential lines form circles around it.",
+  dipole:
+    "A positive and negative charge of equal magnitude. Field lines travel from the positive charge to the negative charge.",
+  unequalDipole:
+    "A positive and negative charge with different magnitudes. The field pattern becomes asymmetric.",
+  twoPositive:
+    "Two equal positive charges. Field lines repel away from both charges, with a low-field region between them.",
+  threeLine:
+    "Three charges arranged in a line. This setup demonstrates superposition and field cancellation.",
+  quadrupole:
+    "Four alternating charges in a square-like pattern. This creates a more complex multipole field.",
+  triangle:
+    "Three charges arranged in a triangle. This shows how geometry affects electric field and potential patterns.",
+  fourPositiveSquare:
+    "Four positive charges at the corners of a square. The center has strong symmetry and field cancellation.",
+  parallelPlates:
+    "Two rows of opposite charges approximating parallel plates. The field between them is nearly uniform.",
 };
 const scenarioTooltip = document.createElement("div");
 scenarioTooltip.id = "scenarioDescriptionTooltip";
@@ -1186,10 +1401,10 @@ canvas.addEventListener("mousemove", (e) => {
     tooltip.classList.add("hidden");
   }
 });
-const hud     = document.getElementById("hud");
+const hud = document.getElementById("hud");
 const hudDist = document.getElementById("hudDist");
-const hudE    = document.getElementById("hudE");
-const hudV    = document.getElementById("hudV");
+const hudE = document.getElementById("hudE");
+const hudV = document.getElementById("hudV");
 canvas.addEventListener("mousemove", (e) => {
   if (!hud) return;
   const rect = canvas.getBoundingClientRect();
@@ -1199,12 +1414,11 @@ canvas.addEventListener("mousemove", (e) => {
     const c = charges[0];
     const dx_px = x - c.x;
     const dy_px = y - c.y;
-    const d_px  = Math.hypot(dx_px, dy_px);
-    const d_m   = d_px / pixelsPerMeter;
+    const d_px = Math.hypot(dx_px, dy_px);
+    const d_m = d_px / pixelsPerMeter;
     const pxText = `${Math.round(d_px)} pixels`;
-    const mText  = d_m >= 1
-      ? `${d_m.toFixed(2)} m`
-      : `${d_m.toExponential(2)} m`;
+    const mText =
+      d_m >= 1 ? `${d_m.toFixed(2)} m` : `${d_m.toExponential(2)} m`;
     hudDist.textContent = `Distance: ${pxText}, ${mText}`;
   } else if (hudDist) {
     hudDist.textContent = "";
@@ -1214,18 +1428,18 @@ canvas.addEventListener("mousemove", (e) => {
     if (hudV) hudV.textContent = "V: —";
     return;
   }
-const V = computePotential(x, y);
-let vTxt;
-if (Math.abs(V) >= 1e6) {
-  vTxt = `${(V / 1e6).toFixed(2)} ×10^6 V`;
-} else if (Math.abs(V) >= 1e3) {
-  vTxt = `${(V / 1e3).toFixed(2)} ×10^3 V`;
-} else if (Math.abs(V) >= 1) {
-  vTxt = `${V.toFixed(2)} V`;
-} else {
-  vTxt = `${V.toExponential(2)} V`;
-}
-if (hudV) hudV.textContent = `V: ${vTxt}`;
+  const V = computePotential(x, y);
+  let vTxt;
+  if (Math.abs(V) >= 1e6) {
+    vTxt = `${(V / 1e6).toFixed(2)} ×10^6 V`;
+  } else if (Math.abs(V) >= 1e3) {
+    vTxt = `${(V / 1e3).toFixed(2)} ×10^3 V`;
+  } else if (Math.abs(V) >= 1) {
+    vTxt = `${V.toFixed(2)} V`;
+  } else {
+    vTxt = `${V.toExponential(2)} V`;
+  }
+  if (hudV) hudV.textContent = `V: ${vTxt}`;
   const { Ex, Ey } = computeElectricField(x, y);
   const Emag = Math.hypot(Ex, Ey);
   let txt;
@@ -1242,8 +1456,8 @@ if (hudV) hudV.textContent = `V: ${vTxt}`;
 });
 canvas.addEventListener("mouseleave", () => {
   if (hudDist) hudDist.textContent = "";
-  if (hudE)    hudE.textContent = "E: —";
-  if (hudV)    hudV.textContent = "V: —";
+  if (hudE) hudE.textContent = "E: —";
+  if (hudV) hudV.textContent = "V: —";
 });
 drawScene();
 updateSimStats();

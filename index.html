@@ -1,399 +1,304 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
- <head>
-
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-G6WBBJB4VQ"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-G6WBBJB4VQ');
-</script>
-
-  <meta charset="utf-8"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>
-   ElectroSim
-  </title>
-  <link href="./favicon.png" rel="icon" sizes="32x32" type="image/png"/>
-  <link href="style.css" rel="stylesheet"/>
- </head>
- <body>
-  <div id="sidebar">
-   <div class="app-header">
-    <div class="app-title">
-     ElectroSim
-    </div>
-    <div class="app-subtitle">
-     Electric Fields &amp; Equipotentials
-    </div>
-   </div>
-   <hr class="section-divider"/>
-   <h2>
-    General
-   </h2>
-   <button id="openInstructionsBtn">
-    Instructions/Information
-   </button>
-   <button id="openScenariosBtn">
-    Example Configurations
-   </button>
-   <div id="currentScenarioDisplay">
-    Current Configuration: None
-   </div>
-   <button id="openTogglesBtn">
-    Toggles/Inputs
-   </button>
-   <button id="resetDefaultsBtn">
-    Reset to Default Settings
-   </button>
-   <button id="probeToolBtn">
-    Probe Tool: Off
-   </button>
-   <button id="screenshotBtn">
-    Download Screenshot
-   </button>
-   <button id="feedbackBtn">
-    Leave Feedback
-  </button>
-   <div class="setup-action-row">
-    <button id="saveSetupBtn">
-     Save Setup
-    </button>
-    <button id="loadSetupBtn">
-     Load Setup
-    </button>
-   </div>
-   <div class="instructions-window hidden" id="instructionsWindow">
-    <div class="instructions-panel">
-     <button class="instructions-close" id="closeInstructionsBtn">
-      ×
-     </button>
-     <h3>
-      Instructions/Information
-     </h3>
-     <p class="hint">
-      Drag and drop particles from the sidebar.
-      <br/>
-      Right-click a charge to delete it.
-      <br/>
-      Double-click a charge to edit its magnitude.
-      <br/>
-      Turn on Probe Tool, then click the canvas to place probes.
-      <br/>
-      Right-click a probe to delete it.
-      <br/>
-      Use Save Setup and Load Setup to reuse configurations.
-      <br/>
-      If you enjoy ElectroSim, please consider using the Leave Feedback button in the sidebar.
-     </p>
-     <div class="legend">
-      <div class="legend-item">
-       <span class="legend-line field-line">
-       </span>
-       = Electric Field
+  <head>
+    <!-- Google tag (gtag.js) -->
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-G6WBBJB4VQ"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+      gtag("config", "G-G6WBBJB4VQ");
+    </script>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Isora</title>
+    <link href="./favicon.png" rel="icon" sizes="32x32" type="image/png" />
+    <link href="style.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="sidebar">
+      <div class="app-header">
+        <div class="app-title">Isora</div>
+        <div class="app-subtitle">Electric Fields &amp; Equipotentials</div>
       </div>
-      <div class="legend-item">
-       <span class="legend-line equip-line">
-       </span>
-       = Equipotential Lines
+      <hr class="section-divider" />
+      <h2>General</h2>
+      <button id="openInstructionsBtn">Instructions/Information</button>
+      <button id="openScenariosBtn">Example Configurations</button>
+      <div id="currentScenarioDisplay">Current Configuration: None</div>
+      <button id="openTogglesBtn">Toggles/Inputs</button>
+      <button id="resetDefaultsBtn">Reset to Default Settings</button>
+      <button id="probeToolBtn">Probe Tool: Off</button>
+      <button id="screenshotBtn">Download Screenshot</button>
+      <div class="setup-action-row">
+        <button id="saveSetupBtn">Save Setup</button>
+        <button id="loadSetupBtn">Load Setup</button>
       </div>
-      <div class="legend-item">
-       <span class="legend-line zero-line">
-       </span>
-       = Zero Voltage Line
+      <div class="instructions-window hidden" id="instructionsWindow">
+        <div class="instructions-panel">
+          <button class="instructions-close" id="closeInstructionsBtn">
+            ×
+          </button>
+          <h3>Instructions/Information</h3>
+          <p class="hint">
+            Drag and drop particles from the sidebar.
+            <br />
+            Right-click a charge to delete it.
+            <br />
+            Double-click a charge to edit its magnitude.
+            <br />
+            Turn on Probe Tool, then click the canvas to place probes.
+            <br />
+            Right-click a probe to delete it.
+            <br />
+            Use Save Setup and Load Setup to reuse configurations.
+          </p>
+          <div class="legend">
+            <div class="legend-item">
+              <span class="legend-line field-line"> </span>
+              = Electric Field
+            </div>
+            <div class="legend-item">
+              <span class="legend-line equip-line"> </span>
+              = Equipotential Lines
+            </div>
+            <div class="legend-item">
+              <span class="legend-line zero-line"> </span>
+              = Zero Voltage Line
+            </div>
+          </div>
+          <div class="instructions-footer">
+            <div>
+              <b> Designed by Aarush Dutta </b>
+            </div>
+            <div>
+              <b> Username: ad309x </b>
+            </div>
+          </div>
+        </div>
       </div>
-     </div>
-     <div class="instructions-footer">
-      <div>
-       <b>
-        Designed by ad309x
-       </b>
+      <h2>Particles</h2>
+      <div class="particle proton" draggable="true">+ Positive Charge</div>
+      <div class="particle electron" draggable="true">− Negative Charge</div>
+      <div class="quick-action-row">
+        <button id="clearBtn">
+          Clear
+          <br />
+          Charges
+        </button>
+        <button id="clearProbesBtn">
+          Clear
+          <br />
+          Probes
+        </button>
+        <button id="clearAllBtn">
+          Clear
+          <br />
+          All
+        </button>
       </div>
-      <div>
-       <b>
-        AP Physics C: Electricity &amp; Magnetism Project
-       </b>
+      <div id="simStats">
+        Charges: 0
+        <br />
+        Probes: 0
       </div>
-      <br/>
-      <div>
-       v1.0: November 17, 2025
+      <hr class="section-divider" />
+      <div class="toggles-window hidden" id="togglesWindow">
+        <div class="toggles-panel">
+          <button class="toggles-close" id="closeTogglesBtn">×</button>
+          <h3>Toggles/Inputs</h3>
+          <label class="toggle">
+            <input checked="" id="toggleField" type="checkbox" />
+            <span> Electric Field </span>
+          </label>
+          <label class="toggle">
+            <input checked="" id="toggleEquip" type="checkbox" />
+            <span> Equipotential Lines </span>
+          </label>
+          <label class="toggle">
+            <input id="togglePotential" type="checkbox" />
+            <span> Voltage Heatmap </span>
+          </label>
+          <label class="toggle">
+            <input id="toggleChargeValues" type="checkbox" />
+            <span> Show Charge Values </span>
+          </label>
+          <div class="control">
+            <label for="pxPerMeterInput"> Pixels per meter: </label>
+            <input
+              id="pxPerMeterInput"
+              type="number"
+              min="1"
+              max="500"
+              step="1"
+              value="100"
+              placeholder="1–500"
+            />
+            <p id="scaleInfo">100 pixels = 1 meter</p>
+            <p class="error" id="scaleError" style="display: none">
+              Type a number from 1–500
+            </p>
+          </div>
+          <div class="control">
+            <label for="fieldDensity">
+              Electric Field Line Density:
+              <span id="fieldDensityVal"> 5 </span>
+            </label>
+            <input
+              id="fieldDensity"
+              max="10"
+              min="1"
+              step="1"
+              type="range"
+              value="5"
+            />
+          </div>
+          <div class="control">
+            <label for="equipDensity">
+              Equipotential Line Density:
+              <span id="equipDensityVal"> 5 </span>
+            </label>
+            <input
+              id="equipDensity"
+              max="10"
+              min="1"
+              step="1"
+              type="range"
+              value="5"
+            />
+          </div>
+        </div>
       </div>
-      <div>
-       v2.0: June 17, 2026
+      <div class="scenario-window hidden" id="scenarioWindow">
+        <div class="scenario-panel">
+          <button class="scenario-close" id="closeScenariosBtn">×</button>
+          <h3>Scenarios / Setups</h3>
+          <button class="scenarioBtn" data-scenario="singlePositive">
+            Single Positive Charge
+          </button>
+          <button class="scenarioBtn" data-scenario="singleNegative">
+            Single Negative Charge
+          </button>
+          <button class="scenarioBtn" data-scenario="dipole">
+            Electric Dipole
+          </button>
+          <button class="scenarioBtn" data-scenario="unequalDipole">
+            Unequal Dipole
+          </button>
+          <button class="scenarioBtn" data-scenario="twoPositive">
+            Two Positive Charges
+          </button>
+          <button class="scenarioBtn" data-scenario="threeLine">
+            Three Charges in a Line
+          </button>
+          <button class="scenarioBtn" data-scenario="quadrupole">
+            Quadrupole
+          </button>
+          <button class="scenarioBtn" data-scenario="triangle">
+            Charge Triangle
+          </button>
+          <button class="scenarioBtn" data-scenario="fourPositiveSquare">
+            Four Positive Charges
+          </button>
+          <button class="scenarioBtn" data-scenario="parallelPlates">
+            Parallel Plates
+          </button>
+        </div>
       </div>
-     </div>
+      <div class="clear-confirm-window hidden" id="clearConfirmWindow">
+        <div class="clear-confirm-panel">
+          <h3 id="clearConfirmTitle">Clear Charges?</h3>
+          <p id="clearConfirmMessage">
+            Are you sure you want to remove all charges?
+          </p>
+          <div class="clear-confirm-actions">
+            <button id="confirmClearYes">Yes</button>
+            <button id="confirmClearNo">No</button>
+          </div>
+        </div>
+      </div>
+      <div class="clear-confirm-window hidden" id="clearProbesConfirmWindow">
+        <div class="clear-confirm-panel">
+          <h3>Clear Probes?</h3>
+          <p>Are you sure you want to remove all probes?</p>
+          <div class="clear-confirm-actions">
+            <button id="confirmClearProbesYes">Yes</button>
+            <button id="confirmClearProbesNo">No</button>
+          </div>
+        </div>
+      </div>
+      <div class="setup-window hidden" id="saveSetupWindow">
+        <div class="setup-panel">
+          <button class="setup-close" id="closeSaveSetupBtn">×</button>
+          <h3>Save Setup</h3>
+          <p class="setup-hint">Copy this code to reload this setup later.</p>
+          <textarea id="saveSetupCode" readonly=""></textarea>
+          <div class="setup-actions">
+            <button id="copySetupCodeBtn">Copy Code</button>
+          </div>
+          <p class="setup-status" id="copySetupStatus"></p>
+        </div>
+      </div>
+      <div class="setup-window hidden" id="loadSetupWindow">
+        <div class="setup-panel">
+          <button class="setup-close" id="closeLoadSetupBtn">×</button>
+          <h3>Load Setup</h3>
+          <p class="setup-hint">Paste your saved setup code below.</p>
+          <textarea
+            id="loadSetupCode"
+            placeholder="Paste setup code here"
+          ></textarea>
+          <div class="setup-actions">
+            <button id="confirmLoadSetupBtn">Load</button>
+          </div>
+          <p class="setup-error" id="loadSetupError"></p>
+        </div>
+      </div>
     </div>
-   </div>
-   <h2>
-    Particles
-   </h2>
-   <div class="particle proton" draggable="true">
-    + Positive Charge
-   </div>
-   <div class="particle electron" draggable="true">
-    − Negative Charge
-   </div>
-   <div class="quick-action-row">
-    <button id="clearBtn">
-     Clear
-     <br/>
-     Charges
-    </button>
-    <button id="clearProbesBtn">
-     Clear
-     <br/>
-     Probes
-    </button>
-    <button id="clearAllBtn">
-     Clear
-     <br/>
-     All
-    </button>
-   </div>
-   <div id="simStats">
-    Charges: 0
-    <br/>
-    Probes: 0
-   </div>
-   <hr class="section-divider"/>
-   <div class="toggles-window hidden" id="togglesWindow">
-    <div class="toggles-panel">
-     <button class="toggles-close" id="closeTogglesBtn">
-      ×
-     </button>
-     <h3>
-      Toggles/Inputs
-     </h3>
-     <label class="toggle">
-      <input checked="" id="toggleField" type="checkbox"/>
-      <span>
-       Electric Field
-      </span>
-     </label>
-     <label class="toggle">
-      <input checked="" id="toggleEquip" type="checkbox"/>
-      <span>
-       Equipotential Lines
-      </span>
-     </label>
-     <label class="toggle">
-      <input id="togglePotential" type="checkbox"/>
-      <span>
-       Voltage Heatmap
-      </span>
-     </label>
-     <label class="toggle">
-      <input id="toggleChargeValues" type="checkbox"/>
-      <span>
-       Show Charge Values
-      </span>
-     </label>
-     <div class="control">
-      <label for="pxPerMeterInput">
-       Pixels per meter:
-      </label>
-      <inputtype="number"id="pxpermeterinput"min="1"max="500"step="1"value="100"placeholder="1–500">
-      </inputtype="number"id="pxpermeterinput"min="1"max="500"step="1"value="100"placeholder="1–500">
-      <p id="scaleInfo">
-       100 pixels = 1 meter
-      </p>
-      <p class="error" id="scaleError" style="display:none;">
-       Type a number from 1–500
-      </p>
-     </div>
-     <div class="control">
-      <label for="fieldDensity">
-       Electric Field Line Density:
-       <span id="fieldDensityVal">
-        4
-       </span>
-      </label>
-      <input id="fieldDensity" max="10" min="1" step="1" type="range" value="4"/>
-     </div>
-     <div class="control">
-      <label for="equipDensity">
-       Equipotential Line Density:
-       <span id="equipDensityVal">
-        4
-       </span>
-      </label>
-      <input id="equipDensity" max="10" min="1" step="1" type="range" value="4"/>
-     </div>
+    <canvas id="fieldCanvas"> </canvas>
+    <div id="hud">
+      <div id="hudCharges"></div>
+      <div id="hudDist">Distance: —</div>
+      <div id="hudE">|E|: —</div>
+      <div id="hudV">V: —</div>
     </div>
-   </div>
-   <div class="scenario-window hidden" id="scenarioWindow">
-    <div class="scenario-panel">
-     <button class="scenario-close" id="closeScenariosBtn">
-      ×
-     </button>
-     <h3>
-      Scenarios / Setups
-     </h3>
-     <button class="scenarioBtn" data-scenario="singlePositive">
-      Single Positive Charge
-     </button>
-     <button class="scenarioBtn" data-scenario="singleNegative">
-      Single Negative Charge
-     </button>
-     <button class="scenarioBtn" data-scenario="dipole">
-      Electric Dipole
-     </button>
-     <button class="scenarioBtn" data-scenario="unequalDipole">
-      Unequal Dipole
-     </button>
-     <button class="scenarioBtn" data-scenario="twoPositive">
-      Two Positive Charges
-     </button>
-     <button class="scenarioBtn" data-scenario="threeLine">
-      Three Charges in a Line
-     </button>
-     <button class="scenarioBtn" data-scenario="quadrupole">
-      Quadrupole
-     </button>
-     <button class="scenarioBtn" data-scenario="triangle">
-      Charge Triangle
-     </button>
-     <button class="scenarioBtn" data-scenario="fourPositiveSquare">
-      Four Positive Charges
-     </button>
-     <button class="scenarioBtn" data-scenario="parallelPlates">
-      Parallel Plates
-     </button>
+    <div aria-hidden="true" class="modal hidden" id="chargeModal">
+      <div class="panel">
+        <button class="close" id="closeChargeModal">×</button>
+        <h3 id="chargeTitle">Edit charge (q?)</h3>
+        <div class="row">
+          <label for="mantissaInput"> Mantissa: </label>
+          <input
+            id="mantissaInput"
+            placeholder="e.g., 1.0"
+            step="any"
+            type="number"
+          />
+        </div>
+        <div class="row">
+          <label for="exponentInput"> Exponent: </label>
+          <input
+            id="exponentInput"
+            placeholder="e.g., -6"
+            step="1"
+            type="number"
+          />
+        </div>
+        <p class="error" id="chargeError" style="display: none">
+          Enter mantissa &gt; 0 and exponent between −12 and 12.
+        </p>
+        <div class="actions">
+          <button class="primary" id="saveChargeBtn">Save</button>
+        </div>
+        <p class="hint">Total charge = mantissa × 10^exponent Coulombs</p>
+      </div>
     </div>
-   </div>
-   <div class="clear-confirm-window hidden" id="clearConfirmWindow">
-    <div class="clear-confirm-panel">
-     <h3 id="clearConfirmTitle">
-      Clear Charges?
-     </h3>
-     <p id="clearConfirmMessage">
-      Are you sure you want to remove all charges?
-     </p>
-     <div class="clear-confirm-actions">
-      <button id="confirmClearYes">
-       Yes
-      </button>
-      <button id="confirmClearNo">
-       No
-      </button>
-     </div>
-    </div>
-   </div>
-   <div class="clear-confirm-window hidden" id="clearProbesConfirmWindow">
-    <div class="clear-confirm-panel">
-     <h3>
-      Clear Probes?
-     </h3>
-     <p>
-      Are you sure you want to remove all probes?
-     </p>
-     <div class="clear-confirm-actions">
-      <button id="confirmClearProbesYes">
-       Yes
-      </button>
-      <button id="confirmClearProbesNo">
-       No
-      </button>
-     </div>
-    </div>
-   </div>
-   <div class="setup-window hidden" id="saveSetupWindow">
-    <div class="setup-panel">
-     <button class="setup-close" id="closeSaveSetupBtn">
-      ×
-     </button>
-     <h3>
-      Save Setup
-     </h3>
-     <p class="setup-hint">
-      Copy this code to reload this setup later.
-     </p>
-     <textarea id="saveSetupCode" readonly=""></textarea>
-     <div class="setup-actions">
-      <button id="copySetupCodeBtn">
-       Copy Code
-      </button>
-     </div>
-     <p class="setup-status" id="copySetupStatus">
-     </p>
-    </div>
-   </div>
-   <div class="setup-window hidden" id="loadSetupWindow">
-    <div class="setup-panel">
-     <button class="setup-close" id="closeLoadSetupBtn">
-      ×
-     </button>
-     <h3>
-      Load Setup
-     </h3>
-     <p class="setup-hint">
-      Paste your saved setup code below.
-     </p>
-     <textarea id="loadSetupCode" placeholder="Paste setup code here"></textarea>
-     <div class="setup-actions">
-      <button id="confirmLoadSetupBtn">
-       Load
-      </button>
-     </div>
-     <p class="setup-error" id="loadSetupError">
-     </p>
-    </div>
-   </div>
-  </div>
-  <canvas id="fieldCanvas">
-  </canvas>
-  <div id="hud">
-   <div id="hudCharges">
-   </div>
-   <div id="hudDist">
-    Distance: —
-   </div>
-   <div id="hudE">
-    |E|: —
-   </div>
-   <div id="hudV">
-    V: —
-   </div>
-  </div>
-  <div aria-hidden="true" class="modal hidden" id="chargeModal">
-   <div class="panel">
-    <button class="close" id="closeChargeModal">
-     ×
-    </button>
-    <h3 id="chargeTitle">
-     Edit charge (q?)
-    </h3>
-    <div class="row">
-     <label for="mantissaInput">
-      Mantissa:
-     </label>
-     <input id="mantissaInput" placeholder="e.g., 1.0" step="any" type="number"/>
-    </div>
-    <div class="row">
-     <label for="exponentInput">
-      Exponent:
-     </label>
-     <input id="exponentInput" placeholder="e.g., -6" step="1" type="number"/>
-    </div>
-    <p class="error" id="chargeError" style="display:none;">
-     Enter mantissa &gt; 0 and exponent between −12 and 12.
-    </p>
-    <div class="actions">
-     <button class="primary" id="saveChargeBtn">
-      Save
-     </button>
-    </div>
-    <p class="hint">
-     Total charge = mantissa × 10^exponent Coulombs
-    </p>
-   </div>
-  </div>
-  <div class="hidden" id="chargeTooltip">
-  </div>
-  <script src="script.js">
-  </script>
- </body>
+    <div class="hidden" id="chargeTooltip"></div>
+    <script src="script.js"></script>
+  </body>
 </html>
